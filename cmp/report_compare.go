@@ -283,7 +283,7 @@ func (opts formatOptions) formatDiffList(recs []reportRecord, k reflect.Kind, pt
 	var keys []reflect.Value // invariant: len(list) == len(keys)
 	groups := coalesceAdjacentRecords(name, recs)
 	maxGroup := diffStats{Name: name}
-	for i, ds := range groups {
+	for _, ds := range groups {
 		if maxLen >= 0 && numDiffs >= maxLen {
 			maxGroup = maxGroup.Append(ds)
 			continue
@@ -291,39 +291,9 @@ func (opts formatOptions) formatDiffList(recs []reportRecord, k reflect.Kind, pt
 
 		// Handle equal records.
 		if ds.NumDiff() == 0 {
-			// Compute the number of leading and trailing records to print.
-			var numLo, numHi int
 			numEqual := ds.NumIgnored + ds.NumIdentical
-			for numLo < numContextRecords && numLo+numHi < numEqual && i != 0 {
-				if r := recs[numLo].Value; r.NumIgnored > 0 && r.NumSame+r.NumDiff == 0 {
-					break
-				}
-				numLo++
-			}
-			for numHi < numContextRecords && numLo+numHi < numEqual && i != len(groups)-1 {
-				if r := recs[numEqual-numHi-1].Value; r.NumIgnored > 0 && r.NumSame+r.NumDiff == 0 {
-					break
-				}
-				numHi++
-			}
-			if numEqual-(numLo+numHi) == 1 && ds.NumIgnored == 0 {
-				numHi++ // Avoid pointless coalescing of a single equal record
-			}
-
 			// Format the equal values.
-			for _, r := range recs[:numLo] {
-				out := opts.WithDiffMode(diffIdentical).FormatDiff(r.Value, ptrs)
-				list = append(list, textRecord{Key: formatKey(r.Key), Value: out})
-				keys = append(keys, r.Key)
-			}
-			if numEqual > numLo+numHi {
-				ds.NumIdentical -= numLo + numHi
-				list.AppendEllipsis(ds)
-				for len(keys) < len(list) {
-					keys = append(keys, reflect.Value{})
-				}
-			}
-			for _, r := range recs[numEqual-numHi : numEqual] {
+			for _, r := range recs[:numEqual] {
 				out := opts.WithDiffMode(diffIdentical).FormatDiff(r.Value, ptrs)
 				list = append(list, textRecord{Key: formatKey(r.Key), Value: out})
 				keys = append(keys, r.Key)
